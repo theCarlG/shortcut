@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package shortcut.wifi;
+
+service WifiService {
+  rpc SetPowerSave(SetPowerSaveRequest) returns (SetPowerSaveResponse) {}
+  rpc GetPowerSave(GetPowerSaveRequest) returns (GetPowerSaveResponse) {}
+  rpc ListDevices(ListDevicesRequest) returns (ListDevicesResponse) {}
+}
+
+
+message SetPowerSaveRequest {
+    string device = 1;
+    bool enabled = 2;
+}
+message SetPowerSaveResponse {
+    bool enabled = 1;
+}
+
+message GetPowerSaveRequest {
+    string device = 1;
+}
+message GetPowerSaveResponse {
+    bool enabled = 1;
+}
+
+message ListDevicesRequest{
+}
+message ListDevicesResponse{
+    repeated string devices = 1;
+}

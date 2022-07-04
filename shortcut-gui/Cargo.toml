@@ -1,0 +1,22 @@
+[package]
+name = "shortcut-gui"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+shortcut-core = { path = "../shortcut-core" }
+eframe = { version = "0.18.0", features = ["persistence"]}
+egui-toast = "0.2.0"
+poll-promise = { version = "0.1.0", features = ["tokio"]}
+#pulsectl-rs = "0.3.2"
+pulsectl-rs = { git = "https://github.com/halli2/pulsectl-rs", rev="ddfb0a869dda13e397cd3162585dd79a40ff5fcc" }
+tracing = "0.1.35"
+tracing-subscriber = { version = "0.3.14", features = ["env-filter"]}
+tracing-journald = "0.3.0"
+
+[dependencies.pulse]
+package = "libpulse-binding"
+version = "2.24.0"

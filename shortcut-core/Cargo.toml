@@ -1,0 +1,18 @@
+[package]
+name = "shortcut-core"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tokio = { version = "1.19.2", features = ["rt-multi-thread", "tracing", "macros", "process", "signal"] }
+tokio-stream = { version = "0.1.9", features = ["net"] }
+prost = "0.10.4"
+tonic = "0.7.2"
+futures = "0.3.16"
+tower = "0.4.13"
+
+[build-dependencies]
+tonic-build = "0.7.2"

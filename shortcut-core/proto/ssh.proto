@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package shortcut.ssh;
+
+service SshService {
+  rpc SetEnabled(SetEnabledRequest) returns (SetEnabledResponse) {}
+  rpc GetEnabled(GetEnabledRequest) returns (GetEnabledResponse) {}
+}
+
+message SetEnabledRequest {
+    bool enabled = 1;
+}
+message SetEnabledResponse {
+    bool enabled = 1;
+}
+
+message GetEnabledRequest {
+}
+message GetEnabledResponse {
+    bool enabled = 1;
+}

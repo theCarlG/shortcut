@@ -1,0 +1,171 @@
+name: Verify
+on:
+  workflow_call:
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust_toolchain: [stable, nightly]
+    name: Setup
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - uses: actions-rs/toolchain@v1
+        with:
+            toolchain: ${{ matrix.rust_toolchain }}
+            components: clippy, rustfmt
+
+  clippy:
+    runs-on: ubuntu-latest
+    needs: [setup]
+    name: Clippy
+    env:
+     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+
+      - uses: actions-rs/clippy-check@v1
+        if: env.GITHUB_TOKEN != ''
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --workspace --all-targets -- -D warnings -W clippy::all
+
+      - uses: actions-rs/cargo@v1
+        if: env.GITHUB_TOKEN == ''
+        with:
+          command: clippy
+          args: --workspace --all-targets -- -D warnings -W clippy::all
+
+  checks:
+    runs-on: ubuntu-latest
+    needs: [setup]
+    name: Checks
+    env:
+     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake
+
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: doc
+          args: --no-deps
+
+  tests:
+    name: Tests
+    runs-on: ubuntu-latest
+    needs: [setup]
+    strategy:
+      matrix:
+        rust_toolchain: [stable, nightly]
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - uses: actions-rs/toolchain@v1
+        with:
+            toolchain: ${{ matrix.rust_toolchain }}
+            override: true
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          sudo ./scripts/install-deps.sh
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          toolchain: ${{ matrix.rust_toolchain }}
+          args: --workspace --doc
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          toolchain: ${{ matrix.rust_toolchain }}
+          args: --workspace --all-targets
+
+
+  cargo-deny:
+    needs: [setup]
+    name: Cargo Deny
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        deny_checks:
+          - advisories
+          - bans licenses sources
+    continue-on-error: ${{ matrix.deny_checks == 'advisories' }}
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - uses: actions-rs/toolchain@v1
+        with:
+            toolchain: stable
+
+      - uses: EmbarkStudios/cargo-deny-action@v1
+        with:
+          command: check ${{ matrix.checks }}

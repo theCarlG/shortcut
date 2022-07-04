@@ -1,0 +1,129 @@
+targets = [
+    { triple = "x86_64-unknown-linux-gnu" },
+    { triple = "x86_64-unknown-linux-musl" },
+]
+
+[advisories]
+vulnerability = "deny"
+unmaintained = "warn"
+yanked = "deny"
+ignore = [
+    # difference crate is unmaintained. Used by mockito.
+    # https://github.com/lipanski/mockito/issues/132
+    "RUSTSEC-2020-0095",
+
+    # Unsound issue in xcb, but there no fix other than "don't use this thing"
+    # and AFAICT, the thing is not being used by x11-clipboard, the direct parent
+    "RUSTSEC-2020-0097",
+
+    # Unsound/security issue in xcb, used by clipboard. Crate is unmaintained also,
+    # should get rid of it or find new maintainers
+    "RUSTSEC-2021-0019",
+
+    # serde_cbor is unmaintained, but it's only used by criterion which is dev only
+    "RUSTSEC-2021-0127",
+]
+
+[bans]
+multiple-versions = "warn"
+wildcards = "allow"
+deny = [
+    # denied crates
+    { name = "openssl" },           # use rustls instead
+    { name = "openssl-sys" },       # use rustls instead
+    { name = "RustyXml" },          # no XML
+    { name = "serde-xml-rs" },      # no XML
+    { name = "color-backtrace" },   # too many dependencies and that are often outdated, so not worth it for us.
+    { name = "bzip2" },             # disallow C dependency, use Rust native versions instead
+    { name = "smart-default", wrappers = ["minidump-common"] },      # smart-default should not be used
+    { name = "actix-web" },         # repeatedly unsound, too many dependencies, and not needed for our use cases
+    { name = "bzip2-sys" },         # disallow C dependency, use Rust native versions instead
+    { name = "nfd" },               # unmaintined, use `rfd` instead
+    { name = "nfd2" },              # use `rfd` instead
+    { name = "msgbox" },            # use `rfd` instead
+    { name = "backtrace-sys" },     # disallow C dependency, use gimli Rust crate instead
+    { name = "keyring" },           # too many and too old dependencies
+    { name = "secret-service" },    # too many and too old dependencies
+    { name = "cap-directories" },   # use app_dirs2
+    { name = "directories" },       # use app_dirs2
+    { name = "directories-next", wrappers = ["eframe"] },  # use app_dirs2
+    { name = "chrono" },            # use `time`
+
+    { name = "async-std" },         # use tokio
+    { name = "cap-async-std" },     # use tokio
+    { name = "sqlx" },              # use tokio-postgres instead
+    { name = "structopt" },         # use the clap v3 which has absorbed the structopt functionality
+
+    # deprecated/abandoned
+    { name = "term" },
+    { name = "quickersort" },
+    { name = "build-helper" },
+    { name = "app_dirs" },
+    { name = "colored" },
+    { name = "floating-duration"},
+    { name = "mopa"},
+    { name = "size_format" },
+    { name = "gcc" },
+    { name = "owning_ref" },
+]
+
+skip = [
+    # very common dependency.
+    { name = "cfg-if", version = "0.1.10" },
+
+    # winit, wayland, etc
+    { name = "nix", version = "=0.22" },
+    { name = "memmap2", version = "=0.3.1" },
+
+    # a lot of crates use the older parking_lot
+    { name = "parking_lot", version = "=0.11" },
+    { name = "parking_lot_core", version = "=0.8" },
+
+    { name = "tokio-util", version = "=0.6" },
+
+    # several crates still use this older version
+    { name = "nix", version = "=0.23.1" },
+]
+skip-tree = [
+]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+required-git-spec = "rev"
+allow-registry = [
+    "https://github.com/rust-lang/crates.io-index",
+]
+allow-git = [
+    "https://github.com/halli2/pulsectl-rs",
+]
+
+[sources.allow-org]
+github = [
+]
+
+[licenses]
+private = { ignore = true, registries = [""] }
+unlicensed = "deny"
+allow-osi-fsf-free = "neither"
+confidence-threshold = 0.92
+copyleft = "deny"
+allow = [
+    "Apache-2.0",                     # https://tldrlegal.com/license/apache-license-2.0-(apache-2.0)
+    "Apache-2.0 WITH LLVM-exception", # https://spdx.org/licenses/LLVM-exception.html
+    "BSD-2-Clause",                   # https://tldrlegal.com/license/bsd-2-clause-license-(freebsd)
+    "BSD-3-Clause",                   # https://tldrlegal.com/license/bsd-3-clause-license-(revised)
+    "MIT",                            # https://tldrlegal.com/license/mit-license
+    "Zlib",                           # https://tldrlegal.com/license/zlib-libpng-license-(zlib)
+    "ISC",                            # https://tldrlegal.com/license/-isc-license
+]
+
+exceptions = [
+    { allow = ["CC0-1.0"], name = "osmesa-sys" },
+    { allow = ["GPL-3.0"], name = "pulsectl-rs" },
+]
+
+[[licenses.clarify]]
+name = "ring"
+expression = "ISC AND MIT AND OpenSSL"
+license-files = [{ path = "LICENSE", hash = 0xbd0eed23 }]

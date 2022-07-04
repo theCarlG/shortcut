@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "shortcut-core",
+    "shortcut-daemon",
+    "shortcut-gui",
+]

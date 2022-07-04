@@ -1,0 +1,102 @@
+name: Release
+on:
+  push:
+    tags:
+    - "[0-9]+.[0-9]+.[0-9]+"
+env:
+  CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER: "clang"
+  CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUSTFLAGS: "-C link-arg=-fuse-ld=/usr/local/bin/mold"
+  CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER: "clang"
+  CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_RUSTFLAGS: "-C link-arg=-fuse-ld=/usr/local/bin/mold"
+
+jobs:
+  verify:
+    name: Verify
+    uses: ./.github/workflows/verify.yml
+
+  create-release:
+    needs: [verify]
+    name: Create Github Release
+    runs-on: ubuntu-latest
+    env:
+     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    outputs:
+      upload_url: ${{ steps.release.outputs.upload_url }}
+      PKG_VERSION: ${{ env.PKG_VERSION }}
+    steps:
+      - name: Get the release version from the tag
+        shell: bash
+        if: env.PKG_VERSION== ''
+        run: |
+          echo "PKG_VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+          echo "version is: ${{ env.VERSION }}"
+
+      - name: Create GitHub release
+        if: env.GITHUB_TOKEN != ''
+        id: release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ env.PKG_VERSION }}
+          release_name: ${{ env.PKG_VERSION }}
+
+  build-release:
+    name: Build Release
+    needs: ['create-release']
+    runs-on: ubuntu-latest
+    env:
+      # Emit backtraces on panics.
+      RUST_BACKTRACE: 1
+    steps:
+    - uses: actions/checkout@v2
+
+    - uses: actions-rs/toolchain@v1
+      with:
+        target: x86_64-unknown-linux-gnu
+        toolchain: stable
+
+    - uses: actions-rs/toolchain@v1
+      with:
+        target: x86_64-unknown-linux-musl
+        toolchain: stable
+
+    - name: Install dependencies
+      shell: bash
+      run: |
+        sudo ./scripts/install-deps.sh
+
+    - name: Build GUI
+      uses: actions-rs/cargo@v1
+      with:
+        command: build
+        args: --release --bin shortcut-gui --target=x86_64-unknown-linux-gnu
+
+    - name: Build Daemon
+      uses: actions-rs/cargo@v1
+      with:
+        command: build
+        args: --release --bin shortcut-daemon --target=x86_64-unknown-linux-musl
+
+    - name: Strip release binaries
+      run: |
+        strip target/x86_64-unknown-linux-musl/release/shortcut-daemon
+        strip target/x86_64-unknown-linux-gnu/release/shortcut-gui
+
+    - name: Create archive
+      run: |
+        PKG_VERSION=${{ needs.create-release.outputs.PKG_VERSION }} scripts/package.sh
+        staging="shortcut-${{ needs.create-release.outputs.PKG_VERSION }}"
+        echo "ASSET=$staging.tar.gz" >> $GITHUB_ENV
+
+    - name: Upload release archive
+      if: env.GITHUB_TOKEN != ''
+      uses: actions/upload-release-asset@v1.0.1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: ${{ env.ASSET }}
+        asset_name: ${{ env.ASSET }}
+        asset_content_type: application/octet-stream
+
